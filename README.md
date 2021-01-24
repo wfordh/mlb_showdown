@@ -3,6 +3,8 @@ Project for re-creating MLB Showdown cards programmatically. I will scrape the d
 
 This may turn into a catch-all repo for baseball related programming, or at least until the other projects become too big for this repo. Currently the 'other projects' are limited to scraping and saving data on my Ottoneu league.
 
+The `showdown_bot_tools` folder holds some ancillary scripts for the great [mlb showdown bot tool](https://github.com/mgula57/mlb_showdown_card_bot)
+
 ### TO DO:
 <ul type='square'>
 	<li> Rewrite Fangraphs scraper to get columns of interest in addition to the standard columns </li>
