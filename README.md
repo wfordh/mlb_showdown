@@ -7,6 +7,6 @@ This may turn into a catch-all repo for baseball related programming, or at leas
 <ul type='square'>
 	<li> Rewrite Fangraphs scraper to get columns of interest in addition to the standard columns </li>
 	<li> Assign Control/Out and On-base/Out </li>
-	<li> Assign player chart outcomes </li>
+	<li> Assign player chart outcomes: look into integer programming/optimization for this</li>
 	<li> Assign IP for pitchers, and fielding and baserunning for hitters </li>
 	<li> Look into any over 20 outcomes for players </li>
