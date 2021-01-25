@@ -41,8 +41,10 @@ def main():
         player_card["year"] = showdown.year
         player_card["icons"] = showdown.icons
         if showdown.is_pitcher:
+            player_card["command"] = showdown.chart["command"]
             pitcher_list.append(player_card)
         else:
+            player_card["on_base"] = showdown.chart["command"]
             hitter_list.append(player_card)
 
     with open("pitcher_cards.csv", "w", encoding="utf-8-sig") as pitcher_file:
