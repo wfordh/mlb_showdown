@@ -7,8 +7,14 @@
 import re
 import requests
 from bs4 import BeautifulSoup
-from pybaseball import statcast_batter_exitvelo_barrels, playerid_lookup, statcast_pitcher, cache
+from pybaseball import (
+    statcast_batter_exitvelo_barrels,
+    playerid_lookup,
+    statcast_pitcher,
+    cache,
+)
 from tqdm import tqdm
+
 
 def main():
     league_id = "953"  # put this in env
@@ -24,12 +30,16 @@ def main():
     auction_players = list()
     for tr in tqdm(table.find("tbody").find_all("tr")):
         player_data = [td.get_text().strip() for td in tr.find_all("td")]
-        player_page_url = [a["href"] for a in tr.find_all("a") if "playercard" in a["href"]].pop()
+        player_page_url = [
+            a["href"] for a in tr.find_all("a") if "playercard" in a["href"]
+        ].pop()
         player_dict = dict(zip(thead, player_data))
         if player_dict["Transaction Type"] != "add":
             continue
         player_dict["ottoneu_id"] = player_page_url.rsplit("=")[1]
-        player_salary_dict = get_ottoneu_avg_salary(player_dict["ottoneu_id"], league_id)
+        player_salary_dict = get_ottoneu_avg_salary(
+            player_dict["ottoneu_id"], league_id
+        )
         player_dict.update(player_salary_dict)
         # clean and separate name
         player_name = clean_name(player_dict["Player Name"])
@@ -60,25 +70,34 @@ def main():
     # append this link to the main url?
     print(player_dict)
 
-
-
     # get names via lookup. use cache.enable() for pybaseball here?
     # get statcast data for individual players or for league and then search for players?
+
 
 # will need to clean names and remove jr, sr, etc
 def get_ottoneu_avg_salary(player_id, lg_id):
     player_page_dict = dict()
     url = f"https://ottoneu.fangraphs.com/{lg_id}/playercard"
-    r = requests.get(url, params = {"id":player_id})
-    soup = BeautifulSoup(r.content, 'html.parser')
-    header_data = soup.find('main').find('header', {"class":"page-header"})
-    level_data = header_data.find("div", {"class":"page-header__section--split"}).find("span", {"class":"strong tinytext"}).get_text()
+    r = requests.get(url, params={"id": player_id})
+    soup = BeautifulSoup(r.content, "html.parser")
+    header_data = soup.find("main").find("header", {"class": "page-header"})
+    level_data = (
+        header_data.find("div", {"class": "page-header__section--split"})
+        .find("span", {"class": "strong tinytext"})
+        .get_text()
+    )
     player_page_dict["is_mlb"] = False if "(" in level_data else True
-    salary_data = header_data.find("div", {"class":"page-header__secondary"})
-    player_page_dict["positions"] = salary_data.find("div", {"class":"page-header__section--split"}).find("p").get_text().strip().rsplit(maxsplit=1)[1]
+    salary_data = header_data.find("div", {"class": "page-header__secondary"})
+    player_page_dict["positions"] = (
+        salary_data.find("div", {"class": "page-header__section--split"})
+        .find("p")
+        .get_text()
+        .strip()
+        .rsplit(maxsplit=1)[1]
+    )
     salary_tags = [tag.get_text() for tag in salary_data.find_all("em")]
     salary_nums = [num.get_text() for num in salary_data.find_all("a")]
-   
+
     for idx, (tag, num) in enumerate(zip(salary_tags, salary_nums)):
         if idx % 2 == 0:
             scoring_type = tag
@@ -86,6 +105,7 @@ def get_ottoneu_avg_salary(player_id, lg_id):
         else:
             player_page_dict[f"{tag} - {scoring_type}"] = num
     return player_page_dict
+
 
 def clean_name(player_name):
     name_suffixes = ("jr", "sr", "ii", "iii", "iv", "v")
@@ -98,5 +118,5 @@ def clean_name(player_name):
     return player_name
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
