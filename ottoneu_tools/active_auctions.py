@@ -21,6 +21,7 @@ def main():
     base_url = "https://ottoneu.fangraphs.com"
     current_year = 2021
     auction_url = f"{base_url}/{league_id}/transactions"
+    # for testing
     auction_url = "https://ottoneu.fangraphs.com/953/transactions?filters%5B%5D=cut&filters%5B%5D=increase"
     resp = requests.get(auction_url)
     soup = BeautifulSoup(resp.content, "html.parser")
@@ -37,7 +38,7 @@ def main():
         if player_dict["Transaction Type"] != "add":
             continue
         player_dict["ottoneu_id"] = player_page_url.rsplit("=")[1]
-        player_salary_dict = get_ottoneu_avg_salary(
+        player_salary_dict = get_ottoneu_player_page(
             player_dict["ottoneu_id"], league_id
         )
         player_dict.update(player_salary_dict)
@@ -45,24 +46,26 @@ def main():
         player_name = clean_name(player_dict["Player Name"])
         first_name, last_name = player_name.split(maxsplit=1)
         # could maybe make this smarter by checking the ottoneu player page for minor league level
-        try:
+        if player_dict["is_mlb"]:
             id_lookup = playerid_lookup(last_name, first_name)
             player_dict["mlbam_id"] = id_lookup.key_mlbam.values[0]
-        except IndexError:
+        else:
             # player in minors...note somehow?
             pass
+
+        is_hitter, is_pitcher = get_position_group(player_dict["positions"])
+        player_dict["is_hitter"] = is_hitter
+        player_dict["is_pitcher"] = is_pitcher
 
         auction_players.append(player_dict)
 
     # somehow get all of the player positions
-    # if any(player_positions["is_hitter"]):
-    #     exit_velo_data = statcast_batter_exitvelo_barrels(current_year)
+    if any([player["is_hitter"] for player in auctions]):
+        exit_velo_data = statcast_batter_exitvelo_barrels(current_year)
     #     # add exit velo data to dict
     # if any(not player_positions["is_hitter"]):
     #     # currently pybaseball only has individual pitcher data
     #     pass
-
-    # want row and link in one list? if so, prob don't want to use list comps
 
     # filter for correct transaction type and only current transactions
     #  get player name and take link to player page
@@ -74,8 +77,7 @@ def main():
     # get statcast data for individual players or for league and then search for players?
 
 
-# will need to clean names and remove jr, sr, etc
-def get_ottoneu_avg_salary(player_id, lg_id):
+def get_ottoneu_player_page(player_id, lg_id):
     player_page_dict = dict()
     url = f"https://ottoneu.fangraphs.com/{lg_id}/playercard"
     r = requests.get(url, params={"id": player_id})
@@ -116,6 +118,26 @@ def clean_name(player_name):
         else player_name
     )
     return player_name
+
+
+def get_position_group(positions):
+    # turn this into a dict?
+    is_hitter = False
+    is_pitcher = False
+    if "/" in positions:
+        if all(["P" in pos for pos in positions.split("/")]):
+            is_pitcher = True
+        elif any(["P" in pos for pos in positions.split("/")]):
+            is_pitcher = True
+            is_hitter = True
+        else:
+            is_hitter = True
+    else:
+        if "P" in positions:
+            is_pitcher = True
+        else:
+            is_hitter = True
+    return is_hitter, is_pitcher
 
 
 if __name__ == "__main__":
