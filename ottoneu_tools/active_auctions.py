@@ -43,17 +43,19 @@ def main():
             player_dict["ottoneu_id"], league_id
         )
         player_dict.update(player_salary_dict)
-        # clean and separate name
+
         player_name = clean_name(player_dict["Player Name"])
         first_name, last_name = player_name.split(maxsplit=1)
-        # could maybe make this smarter by checking the ottoneu player page for minor league level
+
         if player_dict["is_mlb"]:
             if "." in first_name:
                 # lookup has "A.J." as "A. J." for some reason
                 first_name = first_name.replace(".", ". ").strip()
             id_lookup = playerid_lookup(last_name, first_name)
             if id_lookup.shape[0] > 1:
-                player_dict["mlbam_id"] = id_lookup.loc[id_lookup.mlb_played_last == id_lookup.mlb_played_last.max()].key_mlbam.values[0]
+                player_dict["mlbam_id"] = id_lookup.loc[
+                    id_lookup.mlb_played_last == id_lookup.mlb_played_last.max()
+                ].key_mlbam.values[0]
             else:
                 player_dict["mlbam_id"] = id_lookup.key_mlbam.values[0]
 
@@ -63,14 +65,12 @@ def main():
 
         auction_players.append(player_dict)
 
-    # somehow get all of the player positions
     hitters = [player for player in auction_players if player["is_hitter"]]
     pitchers = [player for player in auction_players if player["is_pitcher"]]
     if hitters:
         # setting minBBE = 0 to avoid not getting someone
         # get rid of this indentation and just pull exit velo #s regardless?
         exit_velo_data = statcast_batter_exitvelo_barrels(current_year, minBBE=0)
-        # need to restrict this to hitters
         for player in hitters:
             if not player["is_mlb"]:
                 # avoid index error for minor leaguers
@@ -83,12 +83,12 @@ def main():
                 )
             except:
                 print(player["Player Name"])
+            # add anything else?
             player["avg_exit_velo"] = player_exit_velo["avg_hit_speed"]
             player["max_exit_velo"] = player_exit_velo["max_hit_speed"]
             player["barrel_pa_rate"] = player_exit_velo["brl_pa"]
             player["barrel_bbe_rate"] = player_exit_velo["brl_percent"]
 
-    #     # add exit velo data to dict
     if pitchers:
         # currently pybaseball only has individual pitcher data
         pass
