@@ -75,14 +75,11 @@ def main():
             if not player["is_mlb"]:
                 # avoid index error for minor leaguers
                 continue
-            try:
-                player_exit_velo = (
-                    exit_velo_data.loc[exit_velo_data.player_id == player["mlbam_id"]]
-                    .to_dict("records")
-                    .pop()
-                )
-            except:
-                print(player["Player Name"])
+            player_exit_velo = (
+                exit_velo_data.loc[exit_velo_data.player_id == player["mlbam_id"]]
+                .to_dict("records")
+                .pop()
+            )
             # add anything else?
             player["avg_exit_velo"] = player_exit_velo["avg_hit_speed"]
             player["max_exit_velo"] = player_exit_velo["max_hit_speed"]
