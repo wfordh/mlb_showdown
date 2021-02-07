@@ -5,6 +5,7 @@
 # v2: scrape RoS steamer / zips projections
 # format data into email and send
 import re
+from time import sleep
 import requests
 from bs4 import BeautifulSoup
 from pybaseball import (
@@ -19,7 +20,7 @@ from tqdm import tqdm
 def main():
     league_id = "953"  # put this in env
     base_url = "https://ottoneu.fangraphs.com"
-    current_year = 2021
+    current_year = 2020
     auction_url = f"{base_url}/{league_id}/transactions"
     # for testing
     auction_url = "https://ottoneu.fangraphs.com/953/transactions?filters%5B%5D=cut&filters%5B%5D=increase"
@@ -51,10 +52,10 @@ def main():
                 # lookup has "A.J." as "A. J." for some reason
                 first_name = first_name.replace(".", ". ").strip()
             id_lookup = playerid_lookup(last_name, first_name)
-            try:
+            if id_lookup.shape[0] > 1:
+                player_dict["mlbam_id"] = id_lookup.loc[id_lookup.mlb_played_last == id_lookup.mlb_played_last.max()].key_mlbam.values[0]
+            else:
                 player_dict["mlbam_id"] = id_lookup.key_mlbam.values[0]
-            except:
-                print(last_name, first_name)
 
         is_hitter, is_pitcher = get_position_group(player_dict["positions"])
         player_dict["is_hitter"] = is_hitter
@@ -63,10 +64,14 @@ def main():
         auction_players.append(player_dict)
 
     # somehow get all of the player positions
-    if any([player["is_hitter"] for player in auction_players]):
+    hitters = [player for player in auction_players if player["is_hitter"]]
+    pitchers = [player for player in auction_players if player["is_pitcher"]]
+    if hitters:
         # setting minBBE = 0 to avoid not getting someone
+        # get rid of this indentation and just pull exit velo #s regardless?
         exit_velo_data = statcast_batter_exitvelo_barrels(current_year, minBBE=0)
-        for player in auction_players:
+        # need to restrict this to hitters
+        for player in hitters:
             if not player["is_mlb"]:
                 # avoid index error for minor leaguers
                 continue
@@ -84,7 +89,7 @@ def main():
             player["barrel_bbe_rate"] = player_exit_velo["brl_percent"]
 
     #     # add exit velo data to dict
-    if any([player["is_pitcher"] for player in auction_players]):
+    if pitchers:
         # currently pybaseball only has individual pitcher data
         pass
 
@@ -95,6 +100,7 @@ def main():
 
 
 def get_ottoneu_player_page(player_id, lg_id):
+    sleep(1.1)
     player_page_dict = dict()
     url = f"https://ottoneu.fangraphs.com/{lg_id}/playercard"
     r = requests.get(url, params={"id": player_id})
