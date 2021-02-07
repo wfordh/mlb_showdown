@@ -47,11 +47,14 @@ def main():
         first_name, last_name = player_name.split(maxsplit=1)
         # could maybe make this smarter by checking the ottoneu player page for minor league level
         if player_dict["is_mlb"]:
+            if "." in first_name:
+                # lookup has "A.J." as "A. J." for some reason
+                first_name = first_name.replace(".", ". ").strip()
             id_lookup = playerid_lookup(last_name, first_name)
-            player_dict["mlbam_id"] = id_lookup.key_mlbam.values[0]
-        else:
-            # player in minors...note somehow?
-            pass
+            try:
+                player_dict["mlbam_id"] = id_lookup.key_mlbam.values[0]
+            except:
+                print(last_name, first_name)
 
         is_hitter, is_pitcher = get_position_group(player_dict["positions"])
         player_dict["is_hitter"] = is_hitter
@@ -60,18 +63,32 @@ def main():
         auction_players.append(player_dict)
 
     # somehow get all of the player positions
-    if any([player["is_hitter"] for player in auctions]):
-        exit_velo_data = statcast_batter_exitvelo_barrels(current_year)
-    #     # add exit velo data to dict
-    # if any(not player_positions["is_hitter"]):
-    #     # currently pybaseball only has individual pitcher data
-    #     pass
+    if any([player["is_hitter"] for player in auction_players]):
+        # setting minBBE = 0 to avoid not getting someone
+        exit_velo_data = statcast_batter_exitvelo_barrels(current_year, minBBE=0)
+        for player in auction_players:
+            if not player["is_mlb"]:
+                # avoid index error for minor leaguers
+                continue
+            try:
+                player_exit_velo = (
+                    exit_velo_data.loc[exit_velo_data.player_id == player["mlbam_id"]]
+                    .to_dict("records")
+                    .pop()
+                )
+            except:
+                print(player["Player Name"])
+            player["avg_exit_velo"] = player_exit_velo["avg_hit_speed"]
+            player["max_exit_velo"] = player_exit_velo["max_hit_speed"]
+            player["barrel_pa_rate"] = player_exit_velo["brl_pa"]
+            player["barrel_bbe_rate"] = player_exit_velo["brl_percent"]
 
-    # filter for correct transaction type and only current transactions
-    #  get player name and take link to player page
-    # then use lookup to get player data
-    # append this link to the main url?
-    print(player_dict)
+    #     # add exit velo data to dict
+    if any([player["is_pitcher"] for player in auction_players]):
+        # currently pybaseball only has individual pitcher data
+        pass
+
+    print(auction_players[0])
 
     # get names via lookup. use cache.enable() for pybaseball here?
     # get statcast data for individual players or for league and then search for players?
@@ -88,7 +105,11 @@ def get_ottoneu_player_page(player_id, lg_id):
         .find("span", {"class": "strong tinytext"})
         .get_text()
     )
-    player_page_dict["is_mlb"] = False if "(" in level_data else True
+    if "(" in level_data or len(level_data.split()) == 2:
+        player_page_dict["is_mlb"] = False
+    else:
+        player_page_dict["is_mlb"] = True
+    # player_page_dict["is_mlb"] = False if "(" in level_data else True
     salary_data = header_data.find("div", {"class": "page-header__secondary"})
     player_page_dict["positions"] = (
         salary_data.find("div", {"class": "page-header__section--split"})
@@ -111,7 +132,8 @@ def get_ottoneu_player_page(player_id, lg_id):
 
 def clean_name(player_name):
     name_suffixes = ("jr", "sr", "ii", "iii", "iv", "v")
-    player_name = re.sub(r"([.'])", "", player_name.lower())
+    # might not want this at all for MLB names
+    player_name = re.sub(r"(['])", "", player_name.lower())
     player_name = (
         player_name.rsplit(maxsplit=1)[0]
         if player_name.endswith(name_suffixes)
