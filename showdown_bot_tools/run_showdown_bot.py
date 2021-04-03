@@ -28,25 +28,29 @@ def main():
 
     pitcher_list = list()
     hitter_list = list()
+    bad_players = list()
     for player in tqdm(player_data):
         sleep(0.7)
-        name, year = player.split(",")
-        scraper = BaseballReferenceScraper(name=name, year=year)
-        statline = scraper.player_statline()
-        showdown = ShowdownPlayerCardGenerator(
-            name=name, year=year, stats=statline, context=context
-        )
-        player_card = showdown.chart_ranges
-        player_card["name"] = showdown.name
-        player_card["points"] = showdown.points
-        player_card["year"] = showdown.year
-        player_card["icons"] = None if showdown.icons == [] else showdown.icons
-        if showdown.is_pitcher:
-            player_card["command"] = showdown.chart["command"]
-            pitcher_list.append(player_card)
-        else:
-            player_card["on_base"] = showdown.chart["command"]
-            hitter_list.append(player_card)
+        try:
+            name, year = player.split(",")
+            scraper = BaseballReferenceScraper(name=name, year=year)
+            statline = scraper.player_statline()
+            showdown = ShowdownPlayerCardGenerator(
+                name=name, year=year, stats=statline, context=context
+            )
+            player_card = showdown.chart_ranges
+            player_card["name"] = showdown.name
+            player_card["points"] = showdown.points
+            player_card["year"] = showdown.year
+            player_card["icons"] = None if showdown.icons == [] else showdown.icons
+            if showdown.is_pitcher:
+                player_card["command"] = showdown.chart["command"]
+                pitcher_list.append(player_card)
+            else:
+                player_card["on_base"] = showdown.chart["command"]
+                hitter_list.append(player_card)
+        except:
+            bad_players.append(player)
 
     with open(f"data/pitcher_cards_{context}.csv", "a", encoding="utf-8-sig") as pitcher_file:
         writer = csv.DictWriter(pitcher_file, pitcher_fieldnames)
@@ -59,6 +63,8 @@ def main():
         writer.writeheader()
         for row in hitter_list:
             writer.writerow(row)
+
+    print(bad_players)
 
 
 if __name__ == "__main__":
